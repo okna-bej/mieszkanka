@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mieszkanka Cenki</title>
+  <style>
+    html {
+      margin: 0 20px;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .suggestions-dropdown {
+      position: absolute;
+      width: 100%;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background: white;
+      z-index: 1000;
+      display: none;
+    }
+
+    .suggestions-dropdown div {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    .suggestions-dropdown div:hover {
+      background: #f0f0f0;
+    }
+
+    .result {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+
+    .result div {
+      margin-bottom: 10px;
+    }
+
+    #info {
+      width: 100%;
+      background-color: lightblue;
+      padding: 10px;
+      font-size: 18px;
+      color: #333;
+      border-top: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Mieszkanka Cenki</h1>
+  <div id="loader" class="loader"></div>
+  <div id="content" style="display: none;">
+    <div class="input-group">
+      <label for="developer">Developer:</label>
+      <input type="text" id="developer" placeholder="Wpisz lub wybierz developera" autocomplete="off">
+      <div id="developer-suggestions" class="suggestions-dropdown"></div>
+    </div>
+    <div class="input-group">
+      <label for="inwestycja">Inwestycja:</label>
+      <input type="text" id="inwestycja" placeholder="Wpisz lub wybierz inwestycję" autocomplete="off">
+      <div id="inwestycja-suggestions" class="suggestions-dropdown"></div>
+    </div>
+    <div class="input-group">
+      <label for="numer">Numer:</label>
+      <input type="text" id="numer" placeholder="Wpisz numer mieszkania" autocomplete="off">
+      <div id="numer-suggestions" class="suggestions-dropdown"></div>
+    </div>
+    <div id="result" class="result"></div>
+    <div id="info" style>
+      Garść informacji miśki: ☺️<br>
+      - Ceny są zaokrąglone do najbliższych 10 000 zł w górę, żeby trochę ukryć informacje o pochodzeniu danych. Cena za
+      metr w związku z tym też jest zawyżona<br>
+      - Dane są z lutego 2025<br>
+      - Bazę danych możecie pobrać sb <a href="https://okna-bej.github.io/mieszkanka/mieszkanka.db">tutaj</a><br><br>
+
+      <i>Świat byłby piękniejszym miejscem gdyby ludzie nie traktowali mieszkań jako inwestycji 🙃</i><br>
+      <i>Created by 🪟Okna Bej🪟 (X: <a href="https://x.com/okna_bej" target="_blank">@okna_bej</a>, emaail: okna.bej🐒tuta.io)</i><br><br>
+      <span style="font-size: 11px;">P.S. Jakby ktoś był sb bogaty i wdzięczny zarazem to możesz mi wysłać Monero: 
+      43vARhrbG3Z5h7QCmnHG3yQE8ZYsX3VusEae1PuFWA9HEdd3zNkNAhqEnaKba52YvYgsvrCiVXA4dYH8qDTrAdoj8iJ5dJd lub BTC: 1BejhyE5m5wdpFCE9xhVDCikrtM2nuvio9</span>
+    </div>
+
+  </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.js"></script>
+  <script>
+    let db;
+    const loader = document.getElementById('loader');
+    const content = document.getElementById('content');
+    const developerInput = document.getElementById('developer');
+    const developerSuggestions = document.getElementById('developer-suggestions');
+    const inwestycjaInput = document.getElementById('inwestycja');
+    const inwestycjaSuggestions = document.getElementById('inwestycja-suggestions');
+    const numerInput = document.getElementById('numer');
+    const numerSuggestions = document.getElementById('numer-suggestions');
+    const resultDiv = document.getElementById('result');
+
+    // Fetch and initialize the database
+    async function initDatabase() {
+      const response = await fetch('mieszkanka_optimized.db');
+      const arrayBuffer = await response.arrayBuffer();
+      const SQL = await initSqlJs({
+        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`,
+      });
+      db = new SQL.Database(new Uint8Array(arrayBuffer));
+      loader.style.display = 'none';
+      content.style.display = 'block';
+      populateDeveloperSuggestions();
+    }
+
+    // Populate Developer suggestions
+    function populateDeveloperSuggestions() {
+      const query = 'SELECT id, name FROM developers';
+      const results = db.exec(query);
+      if (results.length > 0) {
+        developerSuggestions.innerHTML = results[0].values
+          .map(([id, name]) => `<div data-id="${id}">${name}</div>`)
+          .join('');
+      }
+    }
+
+    // Populate Inwestycja suggestions based on selected Developer (or all if Developer is empty)
+    function populateInwestycjaSuggestions(developerId = null) {
+      let query = 'SELECT id, name FROM investments';
+      if (developerId) {
+        query += ` WHERE developer_id = ${developerId}`;
+      }
+      const results = db.exec(query);
+      if (results.length > 0) {
+        inwestycjaSuggestions.innerHTML = results[0].values
+          .map(([id, name]) => `<div data-id="${id}">${name}</div>`)
+          .join('');
+      } else {
+        inwestycjaSuggestions.innerHTML = '<div>Brak inwestycji dla wybranego developera.</div>';
+      }
+    }
+
+    // Populate Numer suggestions based on selected Inwestycja
+    function populateNumerSuggestions(investmentId) {
+      if (!investmentId) return; // Do nothing if no investment is selected
+      const query = `
+        SELECT number
+        FROM flats
+        WHERE investment_id = ${investmentId}
+      `;
+      const results = db.exec(query);
+      if (results.length > 0) {
+        numerSuggestions.innerHTML = results[0].values
+          .map(([number]) => `<div>${number}</div>`)
+          .join('');
+      } else {
+        numerSuggestions.innerHTML = '<div>Brak dostępnych numerów mieszkania.</div>';
+      }
+    }
+
+    // Display flat details based on Numer input
+    function displayFlatDetails(investmentId, flatNumber) {
+      const query = `
+        SELECT price, area
+        FROM flats
+        WHERE investment_id = ${investmentId} AND number = '${flatNumber}'
+      `;
+      const results = db.exec(query);
+      if (results.length > 0) {
+        const [price, area] = results[0].values[0];
+        const pricePerSqm = (price / area).toFixed(2);
+        resultDiv.innerHTML = `
+          <div>Cena: ${price.toLocaleString('pl-PL')} zł</div>
+          <div>Powierzchnia: ${area} m²</div>
+          <div>Cena za metr: ~${pricePerSqm} zł/m²</div>
+        `;
+      } else {
+        resultDiv.innerHTML = '<div>Nie znaleziono mieszkania o podanym numerze.</div>';
+      }
+    }
+
+    // Show suggestions dropdown
+    function showSuggestions(dropdown) {
+      dropdown.style.display = 'block';
+    }
+
+    // Hide suggestions dropdown
+    function hideSuggestions(dropdown) {
+      dropdown.style.display = 'none';
+    }
+
+    // Event listeners
+    developerInput.addEventListener('focus', () => {
+      showSuggestions(developerSuggestions);
+    });
+
+    developerInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement != developerInput) {
+          hideSuggestions(developerSuggestions);
+        }
+      }, 110);
+    });
+
+    developerInput.addEventListener('input', () => {
+      showSuggestions(developerSuggestions);
+      const searchTerm = developerInput.value.toLowerCase();
+      Array.from(developerSuggestions.children).forEach(div => {
+        const text = div.textContent.toLowerCase();
+        div.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    });
+
+    developerSuggestions.addEventListener('click', (e) => {
+      if (e.target.dataset.id) {
+        developerInput.value = e.target.textContent;
+        hideSuggestions(developerSuggestions);
+        populateInwestycjaSuggestions(e.target.dataset.id);
+      }
+    });
+
+    inwestycjaInput.addEventListener('focus', () => {
+      showSuggestions(inwestycjaSuggestions);
+    });
+
+    inwestycjaInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement != inwestycjaInput) {
+          hideSuggestions(inwestycjaSuggestions)
+        }
+      }, 110);
+    });
+
+    inwestycjaInput.addEventListener('input', () => {
+      showSuggestions(inwestycjaSuggestions);
+      const searchTerm = inwestycjaInput.value.toLowerCase();
+      Array.from(inwestycjaSuggestions.children).forEach(div => {
+        const text = div.textContent.toLowerCase();
+        div.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    });
+
+    // Populate Inwestycja suggestions only if the dropdown is empty
+    inwestycjaInput.addEventListener('click', () => {
+      if (inwestycjaSuggestions.children.length === 0) {
+        populateInwestycjaSuggestions();
+      }
+    });
+
+    inwestycjaSuggestions.addEventListener('click', (e) => {
+      if (e.target.dataset.id) {
+        inwestycjaInput.value = e.target.textContent;
+        hideSuggestions(inwestycjaSuggestions);
+        populateNumerSuggestions(e.target.dataset.id); // Populate Numer suggestions
+      }
+    });
+
+    numerInput.addEventListener('focus', () => {
+      const selectedInwestycja = Array.from(inwestycjaSuggestions.children).find(
+        div => div.textContent === inwestycjaInput.value
+      );
+      if (selectedInwestycja) {
+        showSuggestions(numerSuggestions);
+      }
+    });
+
+    numerInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement != numerInput) {
+          hideSuggestions(numerSuggestions)
+        }
+      }, 110);
+    });
+
+    numerInput.addEventListener('input', () => {
+      showSuggestions(numerSuggestions);
+      const searchTerm = numerInput.value.toLowerCase();
+      Array.from(numerSuggestions.children).forEach(div => {
+        const text = div.textContent.toLowerCase();
+        div.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    });
+
+    numerSuggestions.addEventListener('click', (e) => {
+      if (e.target.textContent) {
+        numerInput.value = e.target.textContent;
+        hideSuggestions(numerSuggestions);
+      }
+    });
+
+    const findPrice = () => {
+      const investmentId = Array.from(inwestycjaSuggestions.children).find(
+        div => div.textContent === inwestycjaInput.value
+      )?.dataset.id;
+      const flatNumber = numerInput.value.trim();
+      if (investmentId && flatNumber) {
+        displayFlatDetails(investmentId, flatNumber);
+      } else {
+        resultDiv.innerHTML = '';
+      }
+    }
+
+    numerInput.addEventListener('input', findPrice);
+    numerSuggestions.addEventListener('click', findPrice);
+
+    // Close all dropdowns on Esc key press
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.activeElement.blur();
+      }
+    });
+
+    // Initialize the database
+    initDatabase();
+  </script>
+</body>
+
+</html>
