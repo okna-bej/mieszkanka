@@ -123,7 +123,7 @@
       przedstawiają na stronach czy prywatnie<br>
       - Promocje mogą nie być uwzględnione w cenach ze strony<br>
       - Dane są z lutego 2025<br>
-      - Bazę danych możecie pobrać sb tutaj (<a href="/mieszkanka_mega.db">.db</a>, <a href="/mieszkanka_mega.csv">.csv</a>) (NOWA bazka, z dodatkowymi informacjami 
+      - Bazę danych możecie pobrać sb tutaj (<a href="../mieszkanka_mega.db">.db</a>, <a href="../mieszkanka_mega.csv">.csv</a>) (NOWA bazka, z dodatkowymi informacjami 
       niedostępnymi na stronie)<br>
       - Nie wiem ile wytrzyma aktualny sposób hostowania. Możesz sb mnie zafollowować na X, żeby mieć aktualizacje
       odnośnie projektu (<a href="https://x.com/okna_bej" target="_blank">@okna_bej</a>)<br><br>
@@ -162,7 +162,7 @@
 
     // Fetch and initialize the database
     async function initDatabase() {
-      const response = await fetch('/mieszkanka_optimized.db');
+      const response = await fetch('../mieszkanka_optimized.db');
       const arrayBuffer = await response.arrayBuffer();
       const SQL = await initSqlJs({
         locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`,
@@ -255,11 +255,10 @@
     });
 
     developerInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        if (document.activeElement != developerInput) {
-          hideSuggestions(developerSuggestions);
-        }
-      }, 110);
+      // Remove the setTimeout to avoid race conditions
+      if (!developerSuggestions.contains(document.activeElement)) {
+        hideSuggestions(developerSuggestions);
+      }
     });
 
     developerInput.addEventListener('input', () => {
@@ -274,8 +273,13 @@
     developerSuggestions.addEventListener('click', (e) => {
       if (e.target.dataset.id) {
         developerInput.value = e.target.textContent;
+        const developerId = e.target.dataset.id;
         hideSuggestions(developerSuggestions);
-        populateInwestycjaSuggestions(e.target.dataset.id);
+        populateInwestycjaSuggestions(developerId);
+        // Clear dependent fields
+        inwestycjaInput.value = '';
+        numerInput.value = '';
+        resultDiv.innerHTML = '';
       }
     });
 
@@ -284,11 +288,9 @@
     });
 
     inwestycjaInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        if (document.activeElement != inwestycjaInput) {
-          hideSuggestions(inwestycjaSuggestions)
-        }
-      }, 110);
+      if (!inwestycjaSuggestions.contains(document.activeElement)) {
+        hideSuggestions(inwestycjaSuggestions);
+      }
     });
 
     inwestycjaInput.addEventListener('input', () => {
@@ -310,8 +312,12 @@
     inwestycjaSuggestions.addEventListener('click', (e) => {
       if (e.target.dataset.id) {
         inwestycjaInput.value = e.target.textContent;
+        const investmentId = e.target.dataset.id;
         hideSuggestions(inwestycjaSuggestions);
-        populateNumerSuggestions(e.target.dataset.id); // Populate Numer suggestions
+        populateNumerSuggestions(investmentId);
+        // Clear dependent field
+        numerInput.value = '';
+        resultDiv.innerHTML = '';
       }
     });
 
@@ -325,11 +331,9 @@
     });
 
     numerInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        if (document.activeElement != numerInput) {
-          hideSuggestions(numerSuggestions)
-        }
-      }, 110);
+      if (!numerSuggestions.contains(document.activeElement)) {
+        hideSuggestions(numerSuggestions);
+      }
     });
 
     numerInput.addEventListener('input', () => {
@@ -369,6 +373,40 @@
         document.activeElement.blur();
       }
     });
+
+    developerSuggestions.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Prevent the blur event from firing immediately
+    });
+
+    inwestycjaSuggestions.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+
+    numerSuggestions.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+
+    developerInput.addEventListener('click', () => {
+      showSuggestions(developerSuggestions);
+    });
+
+    inwestycjaInput.addEventListener('click', () => {
+      showSuggestions(inwestycjaSuggestions);
+      // Keep your existing code that populates suggestions if empty
+      if (inwestycjaSuggestions.children.length === 0) {
+        populateInwestycjaSuggestions();
+      }
+    });
+
+    numerInput.addEventListener('click', () => {
+      const selectedInwestycja = Array.from(inwestycjaSuggestions.children).find(
+        div => div.textContent === inwestycjaInput.value
+      );
+      if (selectedInwestycja) {
+        showSuggestions(numerSuggestions);
+      }
+    });
+
 
     // Initialize the database
     initDatabase();
