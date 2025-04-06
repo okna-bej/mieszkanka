@@ -94,7 +94,7 @@
 </head>
 
 <body>
-  <h1>Mieszkanka Cenki</h1>
+  <h1>Mieszkanka Cenki - kwiecień 2025</h1>
   <div id="loader" class="loader"></div>
   <div id="content" style="display: none;">
     <div class="input-group">
@@ -117,17 +117,21 @@
       Garść informacji miśki: ☺️<br>
       - Ceny są zaokrąglone do najbliższych 10 000 zł w górę, żeby trochę ukryć informacje o pochodzeniu danych. Cena za
       metr w związku z tym też jest zawyżona<br>
+      - W aktualnej bazie (kwietniowej) ceny są jedynie z zakresu 100 000 zł - 3 000 000 zł (sorki, problem
+      techniczny)<br>
       - Podane ceny to ceny ofertowe, powinny być zgodne (z uwzględnieniem zaokrąglenia) z tym co developerzy
       przedstawiają na stronach czy prywatnie<br>
       - Promocje mogą nie być uwzględnione w cenach ze strony<br>
-      - Dane są z lutego 2025<br>
-      - Bazę danych możecie pobrać sb tutaj (<a href="mieszkanka_mega.db">.db</a>, <a
-        href="mieszkanka_mega.csv">.csv</a>) (NOWA bazka, z dodatkowymi informacjami
-      niedostępnymi na stronie)<br>
+      - Dane są z kwietnia 2025<br>
+      - Bazę danych z kwietnia możecie pobrać sb tutaj (<a href="mieszkanka-april.db">.db</a>, <a
+        href="mieszkanka-april.csv">.csv</a>)<br>
+      - Bazę danych z lutego możecie pobrać sb tutaj (<a href="mieszkanka_mega.db">.db</a>, <a
+        href="mieszkanka_mega.csv">.csv</a>)<br>
       - Nie wiem ile wytrzyma aktualny sposób hostowania. Możesz sb mnie zafollowować na X, żeby mieć aktualizacje
       odnośnie projektu (<a href="https://x.com/okna_bej" target="_blank">@okna_bej</a>)<br><br>
 
       [🚀 Updates]<br>
+      - 2025-04-06: Nowa baza z kwietnia 2025 - mniejsza, ale bardziej aktualna<br>
       - 2025-02-26: Nowa WIĘKSZA baza w pliku (mega mi się nie nie chce dodawać tego do stronki, nk inny to zrobi
       zapraszam na X) - zawarte dodatakowe informacje: (lokalizacja - kraj, miasto itp. może być niepełne, koordynaty
       lat/lng, piętro, liczba poziomów, powierzchnia - balkonu, loggi, tarasu, ogrodu). Poza tym chyba tyle, nie planuję
@@ -163,7 +167,7 @@
 
     // Fetch and initialize the database
     async function initDatabase() {
-      const response = await fetch('mieszkanka_optimized.db');
+      const response = await fetch('mieszkanka-april.db');
       const arrayBuffer = await response.arrayBuffer();
       const SQL = await initSqlJs({
         locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`,
@@ -176,25 +180,26 @@
 
     // Populate Developer suggestions
     function populateDeveloperSuggestions() {
-      const query = 'SELECT id, name FROM developers';
+      const query = 'SELECT DISTINCT developer FROM mieszkanka ORDER BY developer';
       const results = db.exec(query);
       if (results.length > 0) {
         developerSuggestions.innerHTML = results[0].values
-          .map(([id, name]) => `<div data-id="${id}">${name}</div>`)
+          .map(([developer]) => `<div data-name="${developer}">${developer}</div>`)
           .join('');
       }
     }
 
     // Populate Inwestycja suggestions based on selected Developer (or all if Developer is empty)
-    function populateInwestycjaSuggestions(developerId = null) {
-      let query = 'SELECT id, name FROM investments';
-      if (developerId) {
-        query += ` WHERE developer_id = ${developerId}`;
+    function populateInwestycjaSuggestions(developerName = null) {
+      let query = 'SELECT DISTINCT investment FROM mieszkanka';
+      if (developerName) {
+        query += ` WHERE developer = '${developerName}'`;
       }
+      query += ' ORDER BY investment';
       const results = db.exec(query);
       if (results.length > 0) {
         inwestycjaSuggestions.innerHTML = results[0].values
-          .map(([id, name]) => `<div data-id="${id}">${name}</div>`)
+          .map(([investment]) => `<div data-name="${investment}">${investment}</div>`)
           .join('');
       } else {
         inwestycjaSuggestions.innerHTML = '<div>Brak inwestycji dla wybranego developera.</div>';
@@ -202,13 +207,22 @@
     }
 
     // Populate Numer suggestions based on selected Inwestycja
-    function populateNumerSuggestions(investmentId) {
-      if (!investmentId) return; // Do nothing if no investment is selected
-      const query = `
-        SELECT number
-        FROM flats
-        WHERE investment_id = ${investmentId}
-      `;
+    function populateNumerSuggestions(investmentName, developerName) {
+      if (!investmentName) return; // Only require investmentName to be present
+
+      let query = `
+    SELECT number
+    FROM mieszkanka
+    WHERE investment = '${investmentName}'
+  `;
+
+      // Add developer filter only if developerName is provided
+      if (developerName) {
+        query += ` AND developer = '${developerName}'`;
+      }
+
+      query += ' ORDER BY number';
+
       const results = db.exec(query);
       if (results.length > 0) {
         numerSuggestions.innerHTML = results[0].values
@@ -219,26 +233,36 @@
       }
     }
 
+
     // Display flat details based on Numer input
-    function displayFlatDetails(investmentId, flatNumber) {
+    function displayFlatDetails(investmentName, developerName, flatNumber) {
       const query = `
-        SELECT price, area
-        FROM flats
-        WHERE investment_id = ${investmentId} AND number = '${flatNumber}'
-      `;
+    SELECT price, area, rooms, lat, lng
+    FROM mieszkanka
+    WHERE investment = '${investmentName}' AND developer = '${developerName}' AND number = '${flatNumber}'
+  `;
       const results = db.exec(query);
       if (results.length > 0) {
-        const [price, area] = results[0].values[0];
+        const [price, area, rooms, lat, lng] = results[0].values[0];
         const pricePerSqm = (price / area).toFixed(2);
+
+        let locationInfo = '';
+        if (lat && lng) {
+          locationInfo = `<div>Lokalizacja: <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">Zobacz na mapie</a></div>`;
+        }
+
         resultDiv.innerHTML = `
-          <div>Cena: ${price.toLocaleString('pl-PL')} zł</div>
-          <div>Powierzchnia: ${area} m²</div>
-          <div>Cena za metr: ~${pricePerSqm} zł/m²</div>
-        `;
+      <div>Cena: ${price.toLocaleString('pl-PL')} zł</div>
+      <div>Powierzchnia: ${area} m²</div>
+      <div>Cena za metr: ~${pricePerSqm} zł/m²</div>
+      <div>Liczba pokoi: ${rooms || 'brak danych'}</div>
+      ${locationInfo}
+    `;
       } else {
         resultDiv.innerHTML = '<div>Nie znaleziono mieszkania o podanym numerze.</div>';
       }
     }
+
 
     // Show suggestions dropdown
     function showSuggestions(dropdown) {
@@ -272,11 +296,11 @@
     });
 
     developerSuggestions.addEventListener('click', (e) => {
-      if (e.target.dataset.id) {
+      if (e.target.dataset.name) {
         developerInput.value = e.target.textContent;
-        const developerId = e.target.dataset.id;
+        const developerName = e.target.dataset.name;
         hideSuggestions(developerSuggestions);
-        populateInwestycjaSuggestions(developerId);
+        populateInwestycjaSuggestions(developerName);
         // Clear dependent fields
         inwestycjaInput.value = '';
         numerInput.value = '';
@@ -311,11 +335,12 @@
     });
 
     inwestycjaSuggestions.addEventListener('click', (e) => {
-      if (e.target.dataset.id) {
+      if (e.target.dataset.name) {
         inwestycjaInput.value = e.target.textContent;
-        const investmentId = e.target.dataset.id;
+        const investmentName = e.target.dataset.name;
+        const developerName = developerInput.value;
         hideSuggestions(inwestycjaSuggestions);
-        populateNumerSuggestions(investmentId);
+        populateNumerSuggestions(investmentName, developerName);
         // Clear dependent field
         numerInput.value = '';
         resultDiv.innerHTML = '';
@@ -354,12 +379,12 @@
     });
 
     const findPrice = () => {
-      const investmentId = Array.from(inwestycjaSuggestions.children).find(
-        div => div.textContent === inwestycjaInput.value
-      )?.dataset.id;
+      const developerName = developerInput.value;
+      const investmentName = inwestycjaInput.value;
       const flatNumber = numerInput.value.trim();
-      if (investmentId && flatNumber) {
-        displayFlatDetails(investmentId, flatNumber);
+
+      if (developerName && investmentName && flatNumber) {
+        displayFlatDetails(investmentName, developerName, flatNumber);
       } else {
         resultDiv.innerHTML = '';
       }
