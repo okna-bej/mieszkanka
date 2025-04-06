@@ -237,11 +237,17 @@
 
     // Display flat details based on Numer input
     function displayFlatDetails(investmentName, developerName, flatNumber) {
-      const query = `
+      let query = `
     SELECT price, area, rooms, lat, lng
     FROM mieszkanka
-    WHERE investment = '${investmentName}' AND developer = '${developerName}' AND number = '${flatNumber}'
+    WHERE investment = '${investmentName}' AND number = '${flatNumber}'
   `;
+
+      // Add developer filter only if developerName is provided
+      if (developerName) {
+        query += ` AND developer = '${developerName}'`;
+      }
+
       const results = db.exec(query);
       if (results.length > 0) {
         const [price, area, rooms, lat, lng] = results[0].values[0];
@@ -263,7 +269,6 @@
         resultDiv.innerHTML = '<div>Nie znaleziono mieszkania o podanym numerze.</div>';
       }
     }
-
 
     // Show suggestions dropdown
     function showSuggestions(dropdown) {
@@ -384,7 +389,7 @@
       const investmentName = inwestycjaInput.value;
       const flatNumber = numerInput.value.trim();
 
-      if (developerName && investmentName && flatNumber) {
+      if (investmentName && flatNumber) {
         displayFlatDetails(investmentName, developerName, flatNumber);
       } else {
         resultDiv.innerHTML = '';
