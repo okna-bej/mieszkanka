@@ -94,7 +94,7 @@
 </head>
 
 <body>
-  <h1>Mieszkanka Cenki - kwiecień 2025</h1>
+  <h1>Mieszkanka Cenki - maj 2025</h1>
   <div id="loader" class="loader"></div>
   <div id="content" style="display: none;">
     <div class="input-group">
@@ -117,13 +117,15 @@
       Garść informacji miśki: ☺️<br>
       - Ceny są zaokrąglone do najbliższych 10 000 zł w górę, żeby trochę ukryć informacje o pochodzeniu danych. Cena za
       metr w związku z tym też jest zawyżona<br>
-      - W aktualnej bazie (kwietniowej) ceny są jedynie z zakresu 100 000 zł - 3 000 000 zł (sorki, problem
+      - W aktualnej bazie (majowej) ceny są jedynie z zakresu 100 000 zł - 3 000 000 zł (sorki, problem
       techniczny)<br>
       - Podane ceny to ceny ofertowe, powinny być zgodne (z uwzględnieniem zaokrąglenia) z tym co developerzy
       przedstawiają na stronach czy prywatnie<br>
       - Promocje mogą nie być uwzględnione w cenach ze strony<br>
-      - Dane są z kwietnia 2025<br>
+      - Dane są z maja 2025 (porównane z kwietniem 2025)<br>
       - Strona z cenami z lutego jest dostępna <a href="february">tutaj</a><br>
+      - Bazę danych z maja możecie pobrać sb tutaj (<a href="mieszkanka-all.db">.db</a>, <a
+        href="mieszkanka-all.csv">.csv</a>)<br>
       - Bazę danych z kwietnia możecie pobrać sb tutaj (<a href="mieszkanka-april.db">.db</a>, <a
         href="mieszkanka-april.csv">.csv</a>)<br>
       - Bazę danych z lutego możecie pobrać sb tutaj (<a href="mieszkanka_mega.db">.db</a>, <a
@@ -132,6 +134,7 @@
       odnośnie projektu (<a href="https://x.com/okna_bej" target="_blank">@okna_bej</a>)<br><br>
 
       [🚀 Updates]<br>
+      - 2025-05-11: Nowa baza z maja 2025 - zawiera ceny z kwietnia i maja oraz informacje o zmianie ceny<br>
       - 2025-04-06: Nowa baza z kwietnia 2025 - mniejsza, ale bardziej aktualna<br>
       - 2025-02-26: Nowa WIĘKSZA baza w pliku (mega mi się nie nie chce dodawać tego do stronki, nk inny to zrobi
       zapraszam na X) - zawarte dodatakowe informacje: (lokalizacja - kraj, miasto itp. może być niepełne, koordynaty
@@ -168,7 +171,7 @@
 
     // Fetch and initialize the database
     async function initDatabase() {
-      const response = await fetch('mieszkanka-april.db');
+      const response = await fetch('mieszkanka-all.db');
       const arrayBuffer = await response.arrayBuffer();
       const SQL = await initSqlJs({
         locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`,
@@ -238,7 +241,7 @@
     // Display flat details based on Numer input
     function displayFlatDetails(investmentName, developerName, flatNumber) {
       let query = `
-    SELECT price, area, rooms, lat, lng
+    SELECT price_may, price_april, price_change, area, rooms, lat, lng
     FROM mieszkanka
     WHERE investment = '${investmentName}' AND number = '${flatNumber}'
   `;
@@ -250,8 +253,22 @@
 
       const results = db.exec(query);
       if (results.length > 0) {
-        const [price, area, rooms, lat, lng] = results[0].values[0];
-        const pricePerSqm = (price / area).toFixed(2);
+        const [priceMay, priceApril, priceChange, area, rooms, lat, lng] = results[0].values[0];
+        const pricePerSqm = priceMay ? (priceMay / area).toFixed(2) : 'brak danych';
+        
+        // Format price change with + sign for increases
+        let formattedPriceChange = '';
+        if (priceChange !== null) {
+          const sign = priceChange > 0 ? '+' : '';
+          formattedPriceChange = `${sign}${(priceChange * 100).toFixed(2)}%`;
+        } else {
+          formattedPriceChange = 'brak danych';
+        }
+
+        // Determine color for price change
+        let priceChangeColor = '';
+        if (priceChange > 0) priceChangeColor = 'color: #FF4136;'; // Red for price increase
+        else if (priceChange < 0) priceChangeColor = 'color: #2ECC40;'; // Green for price decrease
 
         let locationInfo = '';
         if (lat && lng) {
@@ -259,9 +276,11 @@
         }
 
         resultDiv.innerHTML = `
-      <div>Cena: ${price.toLocaleString('pl-PL')} zł</div>
+      <div>Cena (maj 2025): ${priceMay ? priceMay.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
+      <div>Cena (kwiecień 2025): ${priceApril ? priceApril.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
+      <div style="${priceChangeColor}">Zmiana ceny: ${formattedPriceChange}</div>
       <div>Powierzchnia: ${area} m²</div>
-      <div>Cena za metr: ~${pricePerSqm} zł/m²</div>
+      <div>Cena za metr (maj): ${priceMay ? '~' + pricePerSqm + ' zł/m²' : 'brak danych'}</div>
       <div>Liczba pokoi: ${rooms || 'brak danych'}</div>
       ${locationInfo}
     `;
