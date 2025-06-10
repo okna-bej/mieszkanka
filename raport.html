@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamiczny Raport Rynku Nieruchomości (Analiza Polygon)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Load SQL.js WebAssembly -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .content-hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Dynamiczny Raport Rynku Nieruchomości</h1>
+            <p class="text-lg text-gray-600 mt-2">Analiza oparta na bazie danych `mieszkanka-all.db` (Kwiecień - Czerwiec)</p>
+        </header>
+
+        <!-- Loading Indicator -->
+        <div id="loader-container" class="text-center py-12">
+            <div class="loader mx-auto"></div>
+            <p id="loader-text" class="mt-4 text-lg text-gray-600 font-medium">Pobieranie bazy danych...</p>
+        </div>
+
+        <!-- Main Content (hidden by default) -->
+        <div id="main-content" class="content-hidden">
+            <!-- National Analysis Section -->
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold mb-4 text-center">Analiza Ogólnopolska</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                        <h3 class="text-xl font-semibold mb-4 text-center">Liczba Aktywnych Ofert</h3>
+                        <canvas id="liczbaOfertChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                        <h3 class="text-xl font-semibold mb-4 text-center">Średnia Cena za m² (PLN)</h3>
+                        <canvas id="sredniaCenaM2Chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- City Analysis Section -->
+            <section id="city-analysis" class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-12">
+                <h2 class="text-2xl font-bold mb-6 text-center">Analiza dla Wybranego Miasta</h2>
+                <div class="max-w-md mx-auto mb-8">
+                    <label for="city-select" class="block text-sm font-medium text-gray-700 mb-2 text-center">Wybierz miasto, aby zobaczyć szczegółowe dane:</label>
+                    <select id="city-select" class="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <!-- Options populated by JS -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="p-4 rounded-lg bg-gray-50 border">
+                            <h4 class="text-lg font-semibold mb-3 text-center">Trend Ceny za m²</h4>
+                            <canvas id="cityPriceChart"></canvas>
+                        </div>
+                        <div class="p-4 rounded-lg bg-gray-50 border">
+                            <h4 class="text-lg font-semibold mb-3 text-center">Liczba Ofert w Mieście</h4>
+                            <canvas id="cityOffersChart"></canvas>
+                        </div>
+                    </div>
+                    <div id="city-data-summary" class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                         <!-- City summary populated by JS -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Developer Analysis Section -->
+            <section id="developer-analysis" class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h2 class="text-2xl font-bold mb-6 text-center">Analiza dla Wybranego Dewelopera</h2>
+                <div class="max-w-md mx-auto mb-8">
+                    <label for="developer-select" class="block text-sm font-medium text-gray-700 mb-2 text-center">Wybierz dewelopera, aby zobaczyć szczegółowe dane:</label>
+                    <select id="developer-select" class="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition">
+                        <!-- Options populated by JS -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="p-4 rounded-lg bg-gray-50 border">
+                            <h4 class="text-lg font-semibold mb-3 text-center">Trend Ceny za m²</h4>
+                            <canvas id="developerPriceChart"></canvas>
+                        </div>
+                        <div class="p-4 rounded-lg bg-gray-50 border">
+                            <h4 class="text-lg font-semibold mb-3 text-center">Liczba Ofert Dewelopera</h4>
+                            <canvas id="developerOffersChart"></canvas>
+                        </div>
+                    </div>
+                    <div id="developer-data-summary" class="p-4 rounded-lg bg-purple-50 border border-purple-200">
+                         <!-- Developer summary populated by JS -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+    // --- Point in Polygon Helper ---
+    function isInside(point, vs) {
+        const x = point[0], y = point[1];
+        let inside = false;
+        for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+            const xi = vs[i][0], yi = vs[i][1];
+            const xj = vs[j][0], yj = vs[j][1];
+            const intersect = ((yi > y) !== (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    };
+
+    // --- MAIN SCRIPT ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        const dbUrl = 'https://okna-bej.github.io/mieszkanka/mieszkanka-all.db';
+        const loaderText = document.getElementById('loader-text');
+
+        const config = {
+            locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${filename}`
+        };
+
+        const cities = {
+            'warszawa': { name: 'Warszawa', polygon: [[20.85, 52.36], [21.18, 52.36], [21.18, 52.09], [20.85, 52.09]] },
+            'krakow': { name: 'Kraków', polygon: [[19.81, 50.12], [20.1, 50.12], [20.1, 49.99], [19.81, 49.99]] },
+            'lodz': { name: 'Łódź', polygon: [[19.34, 51.84], [19.58, 51.84], [19.58, 51.69], [19.34, 51.69]] },
+            'wroclaw': { name: 'Wrocław', polygon: [[16.89, 51.18], [17.18, 51.18], [17.18, 51.04], [16.89, 51.04]] },
+            'poznan': { name: 'Poznań', polygon: [[16.79, 52.48], [17.05, 52.48], [17.05, 52.33], [16.79, 52.33]] },
+            'gdansk': { name: 'Gdańsk', polygon: [[18.52, 54.44], [18.78, 54.44], [18.78, 54.27], [18.52, 54.27]] },
+            'szczecin': { name: 'Szczecin', polygon: [[14.4, 53.5], [14.7, 53.5], [14.7, 53.35], [14.4, 53.35]] },
+            'bydgoszcz': { name: 'Bydgoszcz', polygon: [[17.85, 53.18], [18.15, 53.18], [18.15, 53.07], [17.85, 53.07]] },
+            'lublin': { name: 'Lublin', polygon: [[22.45, 51.3], [22.68, 51.3], [22.68, 51.18], [22.45, 51.18]] },
+            'bialystok': { name: 'Białystok', polygon: [[23.05, 53.18], [23.28, 53.18], [23.28, 53.07], [23.05, 53.07]] },
+            'katowice': { name: 'Katowice', polygon: [[18.92, 50.32], [19.12, 50.32], [19.12, 50.18], [18.92, 50.18]] },
+            'gdynia': { name: 'Gdynia', polygon: [[18.4, 54.56], [18.6, 54.56], [18.6, 54.45], [18.4, 54.45]] },
+            'czestochowa': { name: 'Częstochowa', polygon: [[19.0, 50.85], [19.22, 50.85], [19.22, 50.75], [19.0, 50.75]] },
+            'radom': { name: 'Radom', polygon: [[21.05, 51.45], [21.25, 51.45], [21.25, 51.35], [21.05, 51.35]] },
+            'torun': { name: 'Toruń', polygon: [[18.5, 53.05], [18.7, 53.05], [18.7, 52.97], [18.5, 52.97]] },
+            'sosnowiec': { name: 'Sosnowiec', polygon: [[19.08, 50.32], [19.2, 50.32], [19.2, 50.24], [19.08, 50.24]] },
+            'kielce': { name: 'Kielce', polygon: [[20.5, 50.92], [20.75, 50.92], [20.75, 50.82], [20.5, 50.82]] },
+            'rzeszow': { name: 'Rzeszów', polygon: [[21.9, 50.08], [22.1, 50.08], [22.1, 49.98], [21.9, 49.98]] },
+            'gliwice': { name: 'Gliwice', polygon: [[18.6, 50.34], [18.75, 50.34], [18.75, 50.25], [18.6, 50.25]] },
+            'olsztyn': { name: 'Olsztyn', polygon: [[20.38, 53.82], [20.58, 53.82], [20.58, 53.72], [20.38, 53.72]] }
+        };
+        const months = ['Kwiecień', 'Maj', 'Czerwiec'];
+        const priceCols = ['price_april', 'price_may', 'price_june'];
+
+        try {
+            const SQL = await initSqlJs(config);
+            const response = await fetch(dbUrl);
+            const buffer = await response.arrayBuffer();
+            const db = new SQL.Database(new Uint8Array(buffer));
+            
+            loaderText.textContent = 'Analiza danych...';
+
+            // --- National Data ---
+            const nationalData = { offers: [], avgPriceM2: [] };
+            priceCols.forEach(col => {
+                const result = db.exec(`SELECT COUNT(${col}), AVG(${col} / area) FROM mieszkanka WHERE ${col} IS NOT NULL AND area > 0`)[0].values[0];
+                nationalData.offers.push(result[0] || 0);
+                nationalData.avgPriceM2.push(result[1] || 0);
+            });
+
+            // --- Data Aggregation ---
+            const cityData = {};
+            Object.keys(cities).forEach(key => {
+                cityData[key] = { name: cities[key].name, data: months.map(() => ({ offers: 0, totalM2Price: 0 })) };
+            });
+            const developerData = {};
+            const developerList = [];
+
+            const stmt = db.prepare(`SELECT developer, lng, lat, area, ${priceCols.join(', ')} FROM mieszkanka WHERE developer IS NOT NULL AND area > 0`);
+            while (stmt.step()) {
+                const row = stmt.getAsObject();
+                const devName = row.developer;
+                
+                // Initialize developer if not present
+                if (!developerData[devName]) {
+                    developerData[devName] = { name: devName, data: months.map(() => ({ offers: 0, totalM2Price: 0 })) };
+                    developerList.push(devName);
+                }
+
+                // Aggregate for developer
+                priceCols.forEach((col, monthIndex) => {
+                    if (row[col]) {
+                        developerData[devName].data[monthIndex].offers++;
+                        developerData[devName].data[monthIndex].totalM2Price += row[col] / row.area;
+                    }
+                });
+
+                // Aggregate for city if coordinates exist
+                if (row.lng && row.lat) {
+                    const point = [row.lng, row.lat];
+                    for (const cityKey in cities) {
+                        if (isInside(point, cities[cityKey].polygon)) {
+                            priceCols.forEach((col, monthIndex) => {
+                                if (row[col]) {
+                                    cityData[cityKey].data[monthIndex].offers++;
+                                    cityData[cityKey].data[monthIndex].totalM2Price += row[col] / row.area;
+                                }
+                            });
+                            break; 
+                        }
+                    }
+                }
+            }
+            stmt.free();
+            developerList.sort();
+
+            // Calculate averages
+            [cityData, developerData].forEach(dataSet => {
+                for (const key in dataSet) {
+                    dataSet[key].data.forEach(monthData => {
+                        monthData.priceM2 = monthData.offers > 0 ? monthData.totalM2Price / monthData.offers : 0;
+                    });
+                }
+            });
+
+            // --- Setup UI ---
+            setupChartsAndUI(nationalData, cityData, developerData, cities, developerList, months);
+            
+            document.getElementById('loader-container').style.display = 'none';
+            document.getElementById('main-content').classList.remove('content-hidden');
+
+        } catch (error) {
+            console.error('Error loading or processing database:', error);
+            loaderText.textContent = 'Błąd ładowania danych. Sprawdź konsolę.';
+            loaderText.style.color = 'red';
+        }
+    });
+
+    function setupChartsAndUI(nationalData, cityData, developerData, cities, developerList, months) {
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const formatNumber = (num) => Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        const currencyFormatter = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const chartTooltipCallbacks = {
+            label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) { label += ': '; }
+                if (context.parsed.y !== null) {
+                    label += context.dataset.label.toLowerCase().includes('cena') ? currencyFormatter.format(context.parsed.y) : formatNumber(context.parsed.y);
+                }
+                return label;
+            }
+        };
+
+        // --- National Charts ---
+        new Chart(document.getElementById('liczbaOfertChart').getContext('2d'), {
+            type: 'bar', data: { labels: months, datasets: [{ label: 'Liczba Ofert', data: nationalData.offers, backgroundColor: ['#3b82f6', '#22c55e', '#ef4444'], borderWidth: 0 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } } }
+        });
+        new Chart(document.getElementById('sredniaCenaM2Chart').getContext('2d'), {
+            type: 'line', data: { labels: months, datasets: [{ label: 'Średnia Cena za m²', data: nationalData.avgPriceM2, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.2, pointRadius: 5 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } }, scales: { y: { ticks: { callback: (val) => currencyFormatter.format(val) } } } }
+        });
+
+        // --- City Section UI ---
+        let cityPriceChart, cityOffersChart;
+        cityPriceChart = new Chart(document.getElementById('cityPriceChart').getContext('2d'), {
+            type: 'line', data: { labels: months, datasets: [{ label: 'Cena za m²', borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.2 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } }, scales: { y: { ticks: { callback: (val) => currencyFormatter.format(val) } } } }
+        });
+        cityOffersChart = new Chart(document.getElementById('cityOffersChart').getContext('2d'), {
+            type: 'bar', data: { labels: months, datasets: [{ label: 'Liczba ofert', backgroundColor: '#3b82f6', borderWidth: 0 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } }, scales: { y: { ticks: { callback: (val) => formatNumber(val) } } } }
+        });
+        const updateCityView = (cityKey) => {
+            const city = cityData[cityKey];
+            if (!city) return;
+            cityPriceChart.data.datasets[0].data = city.data.map(d => d.priceM2);
+            cityPriceChart.update();
+            cityOffersChart.data.datasets[0].data = city.data.map(d => d.offers);
+            cityOffersChart.update();
+            const summaryDiv = document.getElementById('city-data-summary');
+            const quarterOffers = city.data.reduce((acc, curr) => acc + curr.offers, 0);
+            const avgPriceM2 = quarterOffers > 0 ? city.data.reduce((acc, curr) => acc + curr.totalM2Price, 0) / quarterOffers : 0;
+            const avgOffers = quarterOffers / city.data.length;
+            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${city.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. cena za m²:</span><span class="font-bold text-lg text-blue-600">${currencyFormatter.format(avgPriceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. liczba ofert:</span><span class="font-bold text-lg text-blue-600">${formatNumber(avgOffers)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Cze):</span><span class="font-bold text-lg text-blue-600">${currencyFormatter.format(city.data[2].priceM2)}</span></div></div>`;
+        };
+        const citySelect = document.getElementById('city-select');
+        Object.keys(cities).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = cities[key].name;
+            citySelect.appendChild(option);
+        });
+        citySelect.addEventListener('change', (e) => updateCityView(e.target.value));
+        updateCityView(Object.keys(cities)[0]);
+
+        // --- Developer Section UI ---
+        let developerPriceChart, developerOffersChart;
+        developerPriceChart = new Chart(document.getElementById('developerPriceChart').getContext('2d'), {
+            type: 'line', data: { labels: months, datasets: [{ label: 'Cena za m²', borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', fill: true, tension: 0.2 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } }, scales: { y: { ticks: { callback: (val) => currencyFormatter.format(val) } } } }
+        });
+        developerOffersChart = new Chart(document.getElementById('developerOffersChart').getContext('2d'), {
+            type: 'bar', data: { labels: months, datasets: [{ label: 'Liczba ofert', backgroundColor: '#8B5CF6', borderWidth: 0 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: chartTooltipCallbacks } }, scales: { y: { ticks: { callback: (val) => formatNumber(val) } } } }
+        });
+        const updateDeveloperView = (developerKey) => {
+            const developer = developerData[developerKey];
+            if (!developer) return;
+            developerPriceChart.data.datasets[0].data = developer.data.map(d => d.priceM2);
+            developerPriceChart.update();
+            developerOffersChart.data.datasets[0].data = developer.data.map(d => d.offers);
+            developerOffersChart.update();
+            const summaryDiv = document.getElementById('developer-data-summary');
+            const quarterOffers = developer.data.reduce((acc, curr) => acc + curr.offers, 0);
+            const avgPriceM2 = quarterOffers > 0 ? developer.data.reduce((acc, curr) => acc + curr.totalM2Price, 0) / quarterOffers : 0;
+            const avgOffers = quarterOffers / developer.data.length;
+            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${developer.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. cena za m²:</span><span class="font-bold text-lg text-purple-600">${currencyFormatter.format(avgPriceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. liczba ofert:</span><span class="font-bold text-lg text-purple-600">${formatNumber(avgOffers)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Cze):</span><span class="font-bold text-lg text-purple-600">${currencyFormatter.format(developer.data[2].priceM2)}</span></div></div>`;
+        };
+        const developerSelect = document.getElementById('developer-select');
+        developerList.forEach(devName => {
+            const option = document.createElement('option');
+            option.value = devName;
+            option.textContent = devName;
+            developerSelect.appendChild(option);
+        });
+        developerSelect.addEventListener('change', (e) => updateDeveloperView(e.target.value));
+        if(developerList.length > 0) {
+            updateDeveloperView(developerList[0]);
+        }
+    }
+    </script>
+</body>
+</html>
