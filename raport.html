@@ -34,7 +34,7 @@
         
         <header class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Dynamiczny Raport Rynku Nieruchomości</h1>
-            <p class="text-lg text-gray-600 mt-2">Analiza oparta na bazie danych `mieszkanka-all.db` (Kwiecień - Czerwiec)</p>
+            <p class="text-lg text-gray-600 mt-2">Analiza oparta na bazie danych `mieszkanka-all.db` (Kwiecień - Lipiec)</p>
         </header>
 
         <!-- Loading Indicator -->
@@ -131,7 +131,7 @@
 
     // --- MAIN SCRIPT ---
     document.addEventListener('DOMContentLoaded', async () => {
-        const dbUrl = 'https://okna-bej.github.io/mieszkanka/mieszkanka-all.db';
+        const dbUrl = './mieszkanka-all.db';
         const loaderText = document.getElementById('loader-text');
 
         const config = {
@@ -160,8 +160,8 @@
             'gliwice': { name: 'Gliwice', polygon: [[18.6, 50.34], [18.75, 50.34], [18.75, 50.25], [18.6, 50.25]] },
             'olsztyn': { name: 'Olsztyn', polygon: [[20.38, 53.82], [20.58, 53.82], [20.58, 53.72], [20.38, 53.72]] }
         };
-        const months = ['Kwiecień', 'Maj', 'Czerwiec'];
-        const priceCols = ['price_april', 'price_may', 'price_june'];
+        const months = ['Kwiecień', 'Maj', 'Czerwiec', 'Lipiec'];
+        const priceCols = ['price_april', 'price_may', 'price_june', 'price_july'];
 
         try {
             const SQL = await initSqlJs(config);
@@ -293,7 +293,7 @@
             const quarterOffers = city.data.reduce((acc, curr) => acc + curr.offers, 0);
             const avgPriceM2 = quarterOffers > 0 ? city.data.reduce((acc, curr) => acc + curr.totalM2Price, 0) / quarterOffers : 0;
             const avgOffers = quarterOffers / city.data.length;
-            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${city.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. cena za m²:</span><span class="font-bold text-lg text-blue-600">${currencyFormatter.format(avgPriceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. liczba ofert:</span><span class="font-bold text-lg text-blue-600">${formatNumber(avgOffers)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Cze):</span><span class="font-bold text-lg text-blue-600">${currencyFormatter.format(city.data[2].priceM2)}</span></div></div>`;
+            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${city.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Lip):</span><span class="font-bold text-lg text-blue-600">${currencyFormatter.format(city.data[3].priceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Liczba ofert (Lip):</span><span class="font-bold text-lg text-blue-600">${formatNumber(city.data[3].offers)}</span></div></div>`;
         };
         const citySelect = document.getElementById('city-select');
         Object.keys(cities).forEach(key => {
@@ -326,7 +326,7 @@
             const quarterOffers = developer.data.reduce((acc, curr) => acc + curr.offers, 0);
             const avgPriceM2 = quarterOffers > 0 ? developer.data.reduce((acc, curr) => acc + curr.totalM2Price, 0) / quarterOffers : 0;
             const avgOffers = quarterOffers / developer.data.length;
-            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${developer.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. cena za m²:</span><span class="font-bold text-lg text-purple-600">${currencyFormatter.format(avgPriceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Śr. liczba ofert:</span><span class="font-bold text-lg text-purple-600">${formatNumber(avgOffers)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Cze):</span><span class="font-bold text-lg text-purple-600">${currencyFormatter.format(developer.data[2].priceM2)}</span></div></div>`;
+            summaryDiv.innerHTML = `<h4 class="text-lg font-semibold mb-4 text-center text-gray-800">${developer.name} - Podsumowanie</h4><div class="space-y-3 text-sm"><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Cena za m² (Lip):</span><span class="font-bold text-lg text-purple-600">${currencyFormatter.format(developer.data[3].priceM2)}</span></div><div class="flex justify-between items-center bg-white p-3 rounded-lg"><span class="font-medium text-gray-600">Liczba ofert (Lip):</span><span class="font-bold text-lg text-purple-600">${formatNumber(developer.data[3].offers)}</span></div></div>`;
         };
         const developerSelect = document.getElementById('developer-select');
         developerList.forEach(devName => {
