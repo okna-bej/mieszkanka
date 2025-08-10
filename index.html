@@ -94,7 +94,7 @@
 </head>
 
 <body>
-  <h1>Mieszkanka Cenki - lipiec 2025</h1>
+  <h1>Mieszkanka Cenki - sierpień 2025</h1>
   <div id="loader" class="loader"></div>
   <div id="content" style="display: none;">
     <div class="input-group">
@@ -117,12 +117,12 @@
       Garść informacji miśki: ☺️<br>
       - Ceny są zaokrąglone do najbliższych 10 000 zł w górę, żeby trochę ukryć informacje o pochodzeniu danych. Cena za
       metr w związku z tym też jest zawyżona<br>
-      - W aktualnej bazie (lipcowej) ceny są jedynie z zakresu 100 000 zł - 3 000 000 zł (sorki, problem
+      - W aktualnej bazie (sierpniowej) ceny są jedynie z zakresu 100 000 zł - 3 000 000 zł (sorki, problem
       techniczny)<br>
       - Podane ceny to ceny ofertowe, powinny być zgodne (z uwzględnieniem zaokrąglenia) z tym co developerzy
       przedstawiają na stronach czy prywatnie<br>
       - Promocje mogą nie być uwzględnione w cenach ze strony<br>
-      - Dane są z czerwca 2025 (porównane z majem i kwietniem 2025)<br>
+      - Dane są z sierpnia 2025 (porównane z lipcem, czerwcem, majem i kwietniem 2025)<br>
       - Strona z cenami z lutego jest dostępna <a href="february">tutaj</a><br>
       - Bazę danych ze wszystkich miesięcy możecie pobrać sb tutaj (<a href="mieszkanka-all.db">.db</a>, <a
         href="mieszkanka-all.csv">.csv</a>)<br>
@@ -134,8 +134,9 @@
       odnośnie projektu (<a href="https://x.com/okna_bej" target="_blank">@okna_bej</a>)<br><br>
 
       [🚀 Updates]<br>
-      = 2025-07-05 Nowa baza z lipca 2025 - zawiera ceny z kwietnia, maja, czerwca i lipca oraz informacje o zmianach<br>
-      = 2025-06-10 Dodano <a href="raport.html" target="_blank">raport</a> z informacjami o zmianach<br> 
+      - 2025-08-10 Nowa baza z sierpnia 2025 - zawiera ceny z kwietnia, maja, czerwca, lipca i sierpnia<br>
+      - 2025-07-05 Nowa baza z lipca 2025 - zawiera ceny z kwietnia, maja, czerwca i lipca<br>
+      - 2025-06-10 Dodano <a href="raport.html" target="_blank">raport</a> z informacjami o zmianach<br> 
       - 2025-06-08: Nowa baza z czerwca 2025 - zawiera ceny z kwietnia, maja i czerwca oraz informacje o zmianach cen<br>
       - 2025-05-11: Nowa baza z maja 2025 - zawiera ceny z kwietnia i maja oraz informacje o zmianie ceny<br>
       - 2025-04-06: Nowa baza z kwietnia 2025 - mniejsza, ale bardziej aktualna<br>
@@ -244,7 +245,7 @@
     // Display flat details based on Numer input
     function displayFlatDetails(investmentName, developerName, flatNumber) {
       let query = `
-    SELECT price_may, price_april, price_june, price_july, area, rooms, lat, lng
+    SELECT price_may, price_april, price_june, price_july, price_august, area, rooms, lat, lng
     FROM mieszkanka
     WHERE investment = '${investmentName}' AND number = '${flatNumber}'
   `;
@@ -256,36 +257,45 @@
 
       const results = db.exec(query);
       if (results.length > 0) {
-        const [priceMay, priceApril, priceJune, priceJuly, area, rooms, lat, lng] = results[0].values[0];
-        const pricePerSqmJuly = priceJuly ? (priceJuly / area).toFixed(2) : 'brak danych';
+        const [priceMay, priceApril, priceJune, priceJuly, priceAugust, area, rooms, lat, lng] = results[0].values[0];
+        const pricePerSqmAugust = priceAugust ? (priceAugust / area).toFixed(2) : 'brak danych';
         
-        // Calculate price changes vs July only
-        let priceChangeJulyVsApril = '';
-        let priceChangeJulyVsMay = '';
-        let priceChangeJulyVsJune = '';
+        // Calculate price changes vs August only
+        let priceChangeAugustVsApril = '';
+        let priceChangeAugustVsMay = '';
+        let priceChangeAugustVsJune = '';
+        let priceChangeAugustVsJuly = '';
 
-        if (priceApril && priceJuly && priceApril !== 0) {
-          const changeJuly = ((priceJuly - priceApril) / priceApril) * 100;
-          const signJuly = changeJuly > 0 ? '+' : '';
-          priceChangeJulyVsApril = `${signJuly}${changeJuly.toFixed(2)}%`;
+        if (priceApril && priceAugust && priceApril !== 0) {
+          const changeAugust = ((priceAugust - priceApril) / priceApril) * 100;
+          const signAugust = changeAugust > 0 ? '+' : '';
+          priceChangeAugustVsApril = `${signAugust}${changeAugust.toFixed(2)}%`;
         } else {
-          priceChangeJulyVsApril = 'brak danych';
+          priceChangeAugustVsApril = 'brak danych';
         }
 
-        if (priceMay && priceJuly && priceMay !== 0) {
-          const changeJulyMay = ((priceJuly - priceMay) / priceMay) * 100;
-          const signJulyMay = changeJulyMay > 0 ? '+' : '';
-          priceChangeJulyVsMay = `${signJulyMay}${changeJulyMay.toFixed(2)}%`;
+        if (priceMay && priceAugust && priceMay !== 0) {
+          const changeAugustMay = ((priceAugust - priceMay) / priceMay) * 100;
+          const signAugustMay = changeAugustMay > 0 ? '+' : '';
+          priceChangeAugustVsMay = `${signAugustMay}${changeAugustMay.toFixed(2)}%`;
         } else {
-          priceChangeJulyVsMay = 'brak danych';
+          priceChangeAugustVsMay = 'brak danych';
         }
 
-        if (priceJune && priceJuly && priceJune !== 0) {
-          const changeJulyJune = ((priceJuly - priceJune) / priceJune) * 100;
-          const signJulyJune = changeJulyJune > 0 ? '+' : '';
-          priceChangeJulyVsJune = `${signJulyJune}${changeJulyJune.toFixed(2)}%`;
+        if (priceJune && priceAugust && priceJune !== 0) {
+          const changeAugustJune = ((priceAugust - priceJune) / priceJune) * 100;
+          const signAugustJune = changeAugustJune > 0 ? '+' : '';
+          priceChangeAugustVsJune = `${signAugustJune}${changeAugustJune.toFixed(2)}%`;
         } else {
-          priceChangeJulyVsJune = 'brak danych';
+          priceChangeAugustVsJune = 'brak danych';
+        }
+
+        if (priceJuly && priceAugust && priceJuly !== 0) {
+          const changeAugustJuly = ((priceAugust - priceJuly) / priceJuly) * 100;
+          const signAugustJuly = changeAugustJuly > 0 ? '+' : '';
+          priceChangeAugustVsJuly = `${signAugustJuly}${changeAugustJuly.toFixed(2)}%`;
+        } else {
+          priceChangeAugustVsJuly = 'brak danych';
         }
 
         // Determine colors for price changes
@@ -301,15 +311,17 @@
         }
 
         resultDiv.innerHTML = `
+      <div>Cena (sierpień 2025): ${priceAugust ? priceAugust.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
       <div>Cena (lipiec 2025): ${priceJuly ? priceJuly.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
       <div>Cena (czerwiec 2025): ${priceJune ? priceJune.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
       <div>Cena (maj 2025): ${priceMay ? priceMay.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
       <div>Cena (kwiecień 2025): ${priceApril ? priceApril.toLocaleString('pl-PL') + ' zł' : 'brak danych'}</div>
-      <div style="${getChangeColor(priceChangeJulyVsJune)}">Zmiana ceny (lipiec vs czerwiec): ${priceChangeJulyVsJune}</div>
-      <div style="${getChangeColor(priceChangeJulyVsMay)}">Zmiana ceny (lipiec vs maj): ${priceChangeJulyVsMay}</div>
-      <div style="${getChangeColor(priceChangeJulyVsApril)}">Zmiana ceny (lipiec vs kwiecień): ${priceChangeJulyVsApril}</div>
+      <div style="${getChangeColor(priceChangeAugustVsJuly)}">Zmiana ceny (sierpień vs lipiec): ${priceChangeAugustVsJuly}</div>
+      <div style="${getChangeColor(priceChangeAugustVsJune)}">Zmiana ceny (sierpień vs czerwiec): ${priceChangeAugustVsJune}</div>
+      <div style="${getChangeColor(priceChangeAugustVsMay)}">Zmiana ceny (sierpień vs maj): ${priceChangeAugustVsMay}</div>
+      <div style="${getChangeColor(priceChangeAugustVsApril)}">Zmiana ceny (sierpień vs kwiecień): ${priceChangeAugustVsApril}</div>
       <div>Powierzchnia: ${area} m²</div>
-      <div>Cena za metr (lipiec): ${priceJuly ? '~' + pricePerSqmJuly + ' zł/m²' : 'brak danych'}</div>
+      <div>Cena za metr (sierpień): ${priceAugust ? '~' + pricePerSqmAugust + ' zł/m²' : 'brak danych'}</div>
       <div>Liczba pokoi: ${rooms || 'brak danych'}</div>
       ${locationInfo}
     `;
